@@ -1,0 +1,91 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Website & WASM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install wasm-bindgen-cli 0.2.130
+        run: |
+          echo "Downloading wasm-bindgen-cli 0.2.130 prebuilt binary..."
+          curl -L --retry 3 https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.130/wasm-bindgen-0.2.130-x86_64-unknown-linux-gnu.tar.gz -o wasm-bindgen.tar.gz || true
+          if [ -f wasm-bindgen.tar.gz ] && tar -xzf wasm-bindgen.tar.gz; then
+            mkdir -p $HOME/.cargo/bin
+            cp wasm-bindgen-0.2.130-x86_64-unknown-linux-gnu/wasm-bindgen $HOME/.cargo/bin/
+            chmod +x $HOME/.cargo/bin/wasm-bindgen
+            rm -rf wasm-bindgen.tar.gz wasm-bindgen-0.2.130-x86_64-unknown-linux-gnu
+          fi
+
+          if ! command -v wasm-bindgen &> /dev/null || [ "$(wasm-bindgen --version | awk '{print $2}')" != "0.2.130" ]; then
+            echo "Fallback: cargo install wasm-bindgen-cli --version 0.2.130 --locked"
+            cargo install wasm-bindgen-cli --version 0.2.130 --locked
+          fi
+          wasm-bindgen --version
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build WASM
+        run: npm run build:wasm
+
+      - name: Typecheck TypeScript
+        run: npm run typecheck
+
+      - name: Build Web Application
+        env:
+          VITE_BASE: "/neon_street_gemini/"
+        run: npm run build:web
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

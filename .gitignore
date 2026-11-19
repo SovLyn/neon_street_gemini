@@ -1,2 +1,9 @@
 /target
+node_modules/
+dist/
+web/wasm/pkg/
+.pi-loop.json.lock
+playwright-report/
+test-results/
 MISSION.md
+*.log

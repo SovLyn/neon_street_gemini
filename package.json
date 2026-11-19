@@ -1,0 +1,27 @@
+{
+  "name": "neon-street-block",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build:wasm": "node scripts/build-wasm.mjs --release",
+    "build:wasm:dev": "node scripts/build-wasm.mjs --dev",
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build:web": "vite build",
+    "build": "npm run build:wasm && npm run typecheck && npm run build:web",
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "three": "^0.172.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/three": "^0.172.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0",
+    "vitest": "^3.0.5"
+  }
+}

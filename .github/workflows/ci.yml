@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Verify & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install wasm-bindgen-cli 0.2.130
+        run: |
+          echo "Downloading wasm-bindgen-cli 0.2.130 prebuilt binary..."
+          curl -L --retry 3 https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.130/wasm-bindgen-0.2.130-x86_64-unknown-linux-gnu.tar.gz -o wasm-bindgen.tar.gz || true
+          if [ -f wasm-bindgen.tar.gz ] && tar -xzf wasm-bindgen.tar.gz; then
+            mkdir -p $HOME/.cargo/bin
+            cp wasm-bindgen-0.2.130-x86_64-unknown-linux-gnu/wasm-bindgen $HOME/.cargo/bin/
+            chmod +x $HOME/.cargo/bin/wasm-bindgen
+            rm -rf wasm-bindgen.tar.gz wasm-bindgen-0.2.130-x86_64-unknown-linux-gnu
+          fi
+
+          if ! command -v wasm-bindgen &> /dev/null || [ "$(wasm-bindgen --version | awk '{print $2}')" != "0.2.130" ]; then
+            echo "Fallback: cargo install wasm-bindgen-cli --version 0.2.130 --locked"
+            cargo install wasm-bindgen-cli --version 0.2.130 --locked
+          fi
+          wasm-bindgen --version
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Run Cargo tests
+        run: cargo test
+
+      - name: Run Cargo Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build WASM
+        run: npm run build:wasm
+
+      - name: Typecheck TypeScript
+        run: npm run typecheck
+
+      - name: Run Unit Tests (Vitest)
+        run: npm test
+
+      - name: Build Web Application
+        run: npm run build:web
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E Tests (Playwright)
+        run: npm run test:e2e
