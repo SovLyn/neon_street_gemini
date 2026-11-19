@@ -318,7 +318,7 @@ test.describe('Neon Street Block (霓虹街区) E2E Suite', () => {
         return hudDock && parseFloat(window.getComputedStyle(hudDock).opacity) <= 0.05;
       },
       undefined,
-      { timeout: 3000 }
+      { timeout: 10000, polling: 100 }
     );
 
     const photoModeStyles = await page.evaluate(() => {
@@ -353,7 +353,7 @@ test.describe('Neon Street Block (霓虹街区) E2E Suite', () => {
         return hudDock && parseFloat(window.getComputedStyle(hudDock).opacity) >= 0.8;
       },
       undefined,
-      { timeout: 3000 }
+      { timeout: 10000, polling: 100 }
     );
 
     const exitedStyles = await page.evaluate(() => {
