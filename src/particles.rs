@@ -162,8 +162,7 @@ impl ParticleSim {
         }
 
         out.reserve(self.active_count * PARTICLE_STRIDE);
-        for i in 0..self.active_count {
-            let p = &self.particles[i];
+        for p in self.particles.iter().take(self.active_count) {
             out.push(p.x);
             out.push(p.y);
             out.push(p.z);
